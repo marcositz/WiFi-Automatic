@@ -18,6 +18,8 @@ package de.j4velin.wifiAutoOff;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -135,6 +137,20 @@ abstract class Start {
 
         c.startService(new Intent(c, GeofenceUpdateService.class));
 
-        if (BuildConfig.DEBUG) Logger.log("all timers set/cleared");
+        ComponentName serviceComponent = new ComponentName(c, JobHandler.class);
+        JobScheduler scheduler = (JobScheduler) c.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        JobInfo wifiStateChangedJob =
+                new JobInfo.Builder(JobHandler.JOB_ID_WIFI_AVAILABLE, serviceComponent)
+                        .setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED).build();
+        scheduler.schedule(wifiStateChangedJob);
+
+        JobInfo powerChangedJob = new JobInfo.Builder(JobHandler.JOB_ID_CHARGING, serviceComponent)
+                .setRequiresCharging(true).build();
+        scheduler.schedule(powerChangedJob);
+
+        JobInfo logDeleteJob = new JobInfo.Builder(JobHandler.JOB_ID_DELETE_LOGS, serviceComponent)
+                .setPeriodic(Log.KEEP_DURATION).build();
+        scheduler.schedule(logDeleteJob);
+        if (BuildConfig.DEBUG) Logger.log("all timers/jobs set/cleared");
     }
 }
